@@ -1,6 +1,6 @@
 # MIOTY Azure Stream Analytics Job
 
-This solution contains an Azure Stream Analytics Job that handles the message deduplication. Messages will flow from the IoT Hub into the Job, duplicates based on the *uuid* will be filtered and the cleaned message stream outputted to an Azure Event Hub.
+This solution contains a sample Azure Stream Analytics Job that handles the message deduplication. Messages will flow from the IoT Hub into the Job, duplicates based on the *uuid* will be filtered and the cleaned message stream outputted to an Azure Event Hub.
 
 ## Job Diagram
 
