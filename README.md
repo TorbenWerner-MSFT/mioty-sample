@@ -94,7 +94,7 @@ The script will add a device to the IoT Hub and deploys the code of the Azure Fu
 .\setup.ps1
 ```
 
-**c)** The script will open a new browser tab asking you to login to Azure. Provide your credentials and login. The script uses this authentication to perform the operations on your behalf.
+**c)** The script will open a new browser tab asking you to login to Azure. Provide your credentials and login. The script uses this authentication to perform the operations on your behalf. The script will also ask if you want to deploy the Azure Function, confirm by typing *Y* when asked.
 
 **d)** Wait for the script to complete. It will output the Device connection string as well as the IoT Hub connection string. Make note of it if you want to connect your device.
 

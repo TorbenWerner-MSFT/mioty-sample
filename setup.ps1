@@ -4,6 +4,10 @@ $iotHubName = "[your-iot-hub-name]"
 $deviceId = "[your-mioty-gateway-device-id]"
 $functionappname = "[your-key-management-function-name]"
 
+# Define basic paths
+$scriptPath = $MyInvocation.MyCommand.Path
+$scriptDirectory = Split-Path $scriptPath -Parent
+
 # Log into Azure account.
 Login-AzAccount
 
@@ -32,7 +36,7 @@ Write-Output ""
 Write-Output "Deploying Azure Function"
 Write-Output ""
 
-Publish-AzWebapp -ResourceGroupName $resourceGroupName -Name $functionappname -ArchivePath "keyManagementFunction.zip"
+Publish-AzWebapp -ResourceGroupName $resourceGroupName -Name $functionappname -ArchivePath $($scriptDirectory + "/keyManagementFunction.zip")
 
 Write-Output ""
 Write-Output "Function deployed successfully. All done"
