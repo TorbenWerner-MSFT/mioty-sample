@@ -13,11 +13,13 @@
 	"variables": {
 		"eventHubNamespaceName": "[concat(parameters('projectName'), '-ns-', uniqueString(resourceGroup().id))]",
 		"eventHubName": "[parameters('projectName')]",
-		"iotHubName": "[concat(parameters('projectName'), '-Hub-', uniqueString(resourceGroup().id))]",
-		"streamAnalyticsJobName": "[concat(parameters('projectName'), '-Hub-', uniqueString(resourceGroup().id))]",
+		"eventHubSampleConsumerName": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName'), '/SampleConsumer')]",
+		"iotHubName": "[concat(parameters('projectName'), '-hub-', uniqueString(resourceGroup().id))]",
+		"streamAnalyticsJobName": "[concat(parameters('projectName'), '-hub-', uniqueString(resourceGroup().id))]",
 		"storageAccountName": "[uniqueString(resourceGroup().id)]",
         "hostingPlanName": "[concat(parameters('projectName'), '-farm-', uniqueString(resourceGroup().id))]",
-        "functionAppName": "[concat(parameters('projectName'), '-func-', uniqueString(resourceGroup().id))]"
+        "functionAppName": "[concat(parameters('projectName'), '-func-', uniqueString(resourceGroup().id))]",
+		"applicationInsightsName": "[concat(parameters('projectName'), '-ai-', uniqueString(resourceGroup().id))]"
 	},
 	"resources": [
 		{
@@ -61,6 +63,21 @@
                     "Listen",
                     "Manage",
                     "Send"
+                ]
+            }
+        },
+		{
+            "type": "Microsoft.EventHub/namespaces/eventhubs/authorizationRules",
+            "apiVersion": "2017-04-01",
+            "name": "[variables('eventHubSampleConsumerName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces/eventhubs', variables('eventHubNamespaceName'), variables('eventHubName'))]",
+                "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
+            ],
+            "properties": {
+                "rights": [
+                    "Listen"
                 ]
             }
         },
@@ -143,7 +160,7 @@
 								"type": "Microsoft.Devices/IotHubs",
 								"properties": {
 									"iotHubNamespace": "[variables('IoTHubName')]",
-									"consumerGroupName": "asa",
+									"consumerGroupName": "$Default",
 									"endpoint": "messages/events",
 									"sharedAccessPolicyKey": "[listkeys(resourceId('Microsoft.Devices/IotHubs/IotHubKeys', variables('IoTHubName'), 'iothubowner'), '2016-02-03').primaryKey]",
 									"sharedAccessPolicyName": "iothubowner"
@@ -165,7 +182,7 @@
 					"name": "Transformation",
 					"properties": {
 						"streamingUnits": 1,
-						"query": "WITH \r\nFlattenedData AS (\r\n    SELECT\r\n        DataRecords.ArrayValue.uid AS uid,\r\n        DataRecords.ArrayValue.rssi AS rssi,\r\n        DataRecords.ArrayValue.snr AS snr,\r\n        DataRecords.ArrayValue.type AS type,\r\n        DataRecords.ArrayValue.ts AS ts,\r\n        DataRecords.ArrayValue.frame AS frame,\r\n        i.EventProcessedUtcTime,\r\n        i.PartitionId,\r\n        i.EventEnqueuedUtcTime,\r\n        i.IotHub.MessageId AS IotHubMessageId,\r\n        i.IotHub.CorrelationId AS IotHubCorrelationId,\r\n        i.IotHub.ConnectionDeviceId AS IotHubConnectionDeviceId,\r\n        i.IotHub.ConnectionDeviceGenerationId AS IotHubConnectionDeviceGenerationId,\r\n        i.IotHub.EnqueuedTime AS IotHubEnqueuedTime,\r\n        i.IotHub.StreamId AS IotHubStreamId\r\n    FROM IotHubInput i\r\n    CROSS APPLY GetArrayElements(data) AS DataRecords\r\n    WHERE i.data IS NOT NULL\r\n),\r\nDistData AS (\r\n    SELECT\r\n        uda.RemoveDups(f)\r\n    FROM FlattenedData f\r\n    GROUP BY tumblingwindow(second, 10)\r\n)\r\n\r\nSELECT\r\n    DataRecords.ArrayValue.hash AS hash,\r\n    DataRecords.ArrayValue.uid AS uid,\r\n    DataRecords.ArrayValue.rssi AS rssi,\r\n    DataRecords.ArrayValue.snr AS snr,\r\n    DataRecords.ArrayValue.type AS type,\r\n    DataRecords.ArrayValue.ts AS ts,\r\n    DataRecords.ArrayValue.frame AS frame,\r\n    DataRecords.ArrayValue.EventProcessedUtcTime AS EventProcessedUtcTime,\r\n    DataRecords.ArrayValue.PartitionId AS PartitionId,\r\n    DataRecords.ArrayValue.EventEnqueuedUtcTime AS EventEnqueuedUtcTime,\r\n    DataRecords.ArrayValue.IotHubMessageId AS IotHubMessageId,\r\n    DataRecords.ArrayValue.IotHubCorrelationId AS IotHubCorrelationId,\r\n    DataRecords.ArrayValue.IotHubConnectionDeviceId AS IotHubConnectionDeviceId,\r\n    DataRecords.ArrayValue.IotHubConnectionDeviceGenerationId AS IotHubConnectionDeviceGenerationId,\r\n    DataRecords.ArrayValue.IotHubEnqueuedTime AS IotHubEnqueuedTime,\r\n    DataRecords.ArrayValue.IotHubStreamId AS IotHubStreamId\r\nINTO StorageOutput\r\nFROM DistData d\r\nCROSS APPLY GetArrayElements(d.RemoveDups.data) AS DataRecords\r\nWHERE d.RemoveDups.data IS NOT NULL\r\n"
+						"query": "WITH \r\nFlattenedData AS (\r\n    SELECT\r\n        DataRecords.ArrayValue.uid AS uid,\r\n        DataRecords.ArrayValue.rssi AS rssi,\r\n        DataRecords.ArrayValue.snr AS snr,\r\n        DataRecords.ArrayValue.type AS type,\r\n        DataRecords.ArrayValue.ts AS ts,\r\n        DataRecords.ArrayValue.frame AS frame,\r\n        i.EventProcessedUtcTime,\r\n        i.PartitionId,\r\n        i.EventEnqueuedUtcTime,\r\n        i.IotHub.MessageId AS IotHubMessageId,\r\n        i.IotHub.CorrelationId AS IotHubCorrelationId,\r\n        i.IotHub.ConnectionDeviceId AS IotHubConnectionDeviceId,\r\n        i.IotHub.ConnectionDeviceGenerationId AS IotHubConnectionDeviceGenerationId,\r\n        i.IotHub.EnqueuedTime AS IotHubEnqueuedTime,\r\n        i.IotHub.StreamId AS IotHubStreamId\r\n    FROM IotHubInput i\r\n    CROSS APPLY GetArrayElements(data) AS DataRecords\r\n    WHERE i.data IS NOT NULL\r\n),\r\nDistData AS (\r\n    SELECT\r\n        uda.RemoveDups(f)\r\n    FROM FlattenedData f\r\n    GROUP BY tumblingwindow(second, 10)\r\n)\r\n\r\nSELECT\r\n    DataRecords.ArrayValue.hash AS hash,\r\n    DataRecords.ArrayValue.uid AS uid,\r\n    DataRecords.ArrayValue.rssi AS rssi,\r\n    DataRecords.ArrayValue.snr AS snr,\r\n    DataRecords.ArrayValue.type AS type,\r\n    DataRecords.ArrayValue.ts AS ts,\r\n    DataRecords.ArrayValue.frame AS frame,\r\n    DataRecords.ArrayValue.EventProcessedUtcTime AS EventProcessedUtcTime,\r\n    DataRecords.ArrayValue.PartitionId AS PartitionId,\r\n    DataRecords.ArrayValue.EventEnqueuedUtcTime AS EventEnqueuedUtcTime,\r\n    DataRecords.ArrayValue.IotHubMessageId AS IotHubMessageId,\r\n    DataRecords.ArrayValue.IotHubCorrelationId AS IotHubCorrelationId,\r\n    DataRecords.ArrayValue.IotHubConnectionDeviceId AS IotHubConnectionDeviceId,\r\n    DataRecords.ArrayValue.IotHubConnectionDeviceGenerationId AS IotHubConnectionDeviceGenerationId,\r\n    DataRecords.ArrayValue.IotHubEnqueuedTime AS IotHubEnqueuedTime,\r\n    DataRecords.ArrayValue.IotHubStreamId AS IotHubStreamId\r\nINTO EventHubOutput\r\nFROM DistData d\r\nCROSS APPLY GetArrayElements(d.RemoveDups.data) AS DataRecords\r\nWHERE d.RemoveDups.data IS NOT NULL\r\n"
 					}
 				},
 				"outputs": [
@@ -243,6 +260,19 @@
                 }
             ]
         },
+		{
+			"type": "microsoft.insights/components",
+			"apiVersion": "2020-02-02-preview",
+			"name": "[variables('applicationInsightsName')]",
+			"location": "[resourceGroup().location]",
+			"tags": {
+				"[concat('hidden-link:', resourceId('Microsoft.Web/sites', variables('applicationInsightsName')))]": "Resource"
+			},
+			"properties": {
+				"ApplicationId": "[variables('applicationInsightsName')]",
+				"Request_Source": "IbizaWebAppExtensionCreate"
+			}
+		},
         {
             "type": "Microsoft.Web/serverfarms",
             "apiVersion": "2020-06-01",
@@ -269,7 +299,8 @@
             "kind": "functionapp",
             "dependsOn": [
                 "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+				"[resourceId('microsoft.insights/components', variables('applicationInsightsName'))]"
             ],
             "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
@@ -302,7 +333,11 @@
                         {
                             "name": "IotHubConnectionString",
                             "value": "[concat('HostName=', reference(resourceId('Microsoft.Devices/IoTHubs', variables('IoTHubName')), providers('Microsoft.Devices', 'IoTHubs').apiVersions[0]).hostName, ';SharedAccessKeyName=iothubowner;SharedAccessKey=', listKeys(resourceId('Microsoft.Devices/IotHubs', variables('IoTHubName')), providers('Microsoft.Devices', 'IoTHubs').apiVersions[0]).value[0].primaryKey)]"
-                        }
+                        },
+						{
+							"name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+							"value": "[reference(resourceId('microsoft.insights/components', variables('applicationInsightsName')), '2020-02-02-preview').InstrumentationKey]"
+						}
                     ]
                 }
             }
