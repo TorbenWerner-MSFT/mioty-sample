@@ -26,6 +26,13 @@ Write-Output ""
 Write-Output "Listing device connection string"
 Write-Output "======================================"
 Write-Output $deviceConnectionString
+Write-Output ""
 
 # Publish Azure function
+Write-Output "Deploying Azure Function"
+Write-Output ""
+
 Publish-AzWebapp -ResourceGroupName $resourceGroupName -Name $functionappname -ArchivePath "keyManagementFunction.zip"
+
+Write-Output ""
+Write-Output "Function deployed successfully. All done"
