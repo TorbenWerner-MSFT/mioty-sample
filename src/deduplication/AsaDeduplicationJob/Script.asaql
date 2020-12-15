@@ -1,0 +1,55 @@
+﻿WITH 
+FlattenedData AS (
+    SELECT
+        i.header.gw as headergw,
+        i.header.ts as headerts,
+        DataRecords.ArrayValue.uid AS uid,
+        DataRecords.ArrayValue.rssi AS rssi,
+        DataRecords.ArrayValue.snr AS snr,
+        DataRecords.ArrayValue.type AS type,
+        DataRecords.ArrayValue.uuid as uuid,
+        DataRecords.ArrayValue.ts AS ts,
+        DataRecords.ArrayValue.frame AS frame,
+        i.EventProcessedUtcTime,
+        i.PartitionId,
+        i.EventEnqueuedUtcTime,
+        i.IotHub.MessageId AS IotHubMessageId,
+        i.IotHub.CorrelationId AS IotHubCorrelationId,
+        i.IotHub.ConnectionDeviceId AS IotHubConnectionDeviceId,
+        i.IotHub.ConnectionDeviceGenerationId AS IotHubConnectionDeviceGenerationId,
+        i.IotHub.EnqueuedTime AS IotHubEnqueuedTime,
+        i.IotHub.StreamId AS IotHubStreamId
+    FROM IotHubInput i
+    CROSS APPLY GetArrayElements(data) AS DataRecords
+    WHERE i.data IS NOT NULL
+),
+DistData AS (
+    SELECT
+        uda.RemoveDups(f)
+    FROM FlattenedData f
+    GROUP BY tumblingwindow(second, 10)
+)
+
+SELECT
+    DataRecords.ArrayValue.headergw as headergw,
+    DataRecords.ArrayValue.headerts as headerts,
+    DataRecords.ArrayValue.uid AS uid,
+    DataRecords.ArrayValue.rssi AS rssi,
+    DataRecords.ArrayValue.snr AS snr,
+    DataRecords.ArrayValue.type AS type,
+    DataRecords.ArrayValue.uuid as uuid,
+    DataRecords.ArrayValue.ts AS ts,
+    DataRecords.ArrayValue.frame AS frame,
+    DataRecords.ArrayValue.EventProcessedUtcTime AS EventProcessedUtcTime,
+    DataRecords.ArrayValue.PartitionId AS PartitionId,
+    DataRecords.ArrayValue.EventEnqueuedUtcTime AS EventEnqueuedUtcTime,
+    DataRecords.ArrayValue.IotHubMessageId AS IotHubMessageId,
+    DataRecords.ArrayValue.IotHubCorrelationId AS IotHubCorrelationId,
+    DataRecords.ArrayValue.IotHubConnectionDeviceId AS IotHubConnectionDeviceId,
+    DataRecords.ArrayValue.IotHubConnectionDeviceGenerationId AS IotHubConnectionDeviceGenerationId,
+    DataRecords.ArrayValue.IotHubEnqueuedTime AS IotHubEnqueuedTime,
+    DataRecords.ArrayValue.IotHubStreamId AS IotHubStreamId
+INTO EventHubOutput
+FROM DistData d
+CROSS APPLY GetArrayElements(d.RemoveDups.data) AS DataRecords
+WHERE d.RemoveDups.data IS NOT NULL
